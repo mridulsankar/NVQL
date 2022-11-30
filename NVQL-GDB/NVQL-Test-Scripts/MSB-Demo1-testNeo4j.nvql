@@ -1,0 +1,124 @@
+
+/*Drop Conditions*/
+
+drop entity-type (host, network-domain, service, vulnerability, firewall, gateway, privilege, reachability)
+drop security-condition-type(reachability, privilege)
+drop exploit-type(bofExploit)
+
+/*
+drop relation-type (memberOf, connect, atHost, accessTo, accessBy, hasVuln, runAt)
+drop security-condition-type(reachability, privilege)
+drop exploit-type(bofExploit)
+*/
+
+/*Delete*/
+
+/*
+delete x:host where (x.host_Id >= 3)
+delete x:host where (x.ipAddr == "192.168.128.1")
+delete x:host where (x.ipAddr=="192.168.148.3")
+delete x:host where (x.name=="h1")
+delete x:host where (x.os=="Win7")
+delete x:network-domain where (x.name == "nd1")
+*/
+/*Entity Type Definitions*/
+
+define entity-type host (name: string, ipAddr: string, macAddr: string, os:string)
+define entity-type network-domain (name:string, netAddr:string, subnetMask:string)
+define entity-type service (name:string, protocol:string, portNo:int, swName:string, swVer:string)
+define entity-type vulnerability (name:string, cveId:string)
+define entity-type firewall (name:string, ifCount:int, ifIpAddr:string, ifSubnetMask:string)
+define entity-type gateway (name:string, ifCount:int, ifIpAddr:string, ifSubnetMask:string)
+define entity-type privilege (name: string, privType:string)
+define entity-type reachability (name: string, rchType:string)
+
+/*Entities*/
+
+create entity host (name:"h3", ipAddr:"192.168.148.3", macAddr:"xx:yy:zz:xx:xx:xx", os:"Ubuntu")
+create entity host (name:"h1", ipAddr:"192.168.148.1", macAddr:"xx:xx:xx:xx:xx:xx", os:"Ubuntu")
+create entity host (name:"h2", ipAddr:"192.168.148.2", macAddr:"xx:yy:xx:xx:xx:xx", os:"Ubuntu")
+
+create entity network-domain (name:"nd1", netAddr:"192.168.148.0",subnetMask:"255.255.255.0")
+create entity service (name:"httpd1", protocol:"tcp", portNo:80, swName:"vsc", swVer:"1.1.2")
+create entity service (name:"httpd2", protocol:"tcp", portNo:80, swName:"vsc", swVer:"1.1.2")
+
+create entity vulnerability (name:"Vuln1", cveId:"CVE-2008-0106")
+
+/*Constraint Definitions*/
+
+define unique host(ipAddr)
+define unique vulnerability (cveId)
+
+/*relation Type Definitions*/
+
+define relation-type memberOf(since: time) between {host,firewall}, {network-domain}
+define relation-type connect (ifId: int) between {gateway}, {network-domain}
+define relation-type atHost () between {service, privilege}, {host,gateway}
+define relation-type accessTo () between {reachability} , {service}
+define relation-type accessBy () between {reachability} , {host, network-domain}
+define relation-type hasVuln () between {service} , {vulnerability}
+define relation-type runAt () between {service} , {host}
+
+/*Constraint Definitions*/
+
+define cardinality memberOf n:1 
+define cardinality hasVuln n:n
+
+/*Relations*/
+
+create relation x:host (x.ipAddr == "192.168.148.1") memberOf (since:"10:11:34") y:network-domain (y.netAddr == "192.168.148.0")
+create relation x:host (x.ipAddr == "192.168.148.2") memberOf (since:"10:11:37") y:network-domain (y.netAddr == "192.168.148.0")
+create relation x:host (x.ipAddr == "192.168.148.3") memberOf (since:"10:11:39") y:network-domain (y.netAddr == "192.168.148.0")
+
+
+create relation x:service (x.name == "httpd1") runAt() y:host (y.ipAddr == "192.168.148.1")
+create relation x:service (x.name == "httpd2") runAt() y:host (y.ipAddr == "192.168.148.2")
+
+create relation x:service (x.name == "httpd1") hasVuln() y:vulnerability (y.cveId == "CVE-2008-0106")
+create relation x:service (x.name == "httpd2") hasVuln() y:vulnerability (y.cveId == "CVE-2008-0106")
+
+
+/*Security Condition Type Definitions*/
+
+define security-condition-type reachability (name:string, since: time, rchType:string) accessBy {network-domain, host} accessTo {service} 
+define security-condition-type privilege (name: string, since:time, privType: string) atHost {host,gateway}
+
+/*Exploit Type Definitions*/
+
+define exploit-type bofExploit (name:string, category:string) CVE("CVE-2008-0106") 
+    precond {privilege (privType:"user"), reachability (rchType:"xyz")} 
+    postcond {privilege (privType:"user")}
+
+
+/*Security Conditions*/
+
+create security-condition reachability (name:"httpd31", rchType:"xyz") accessBy {x:host (x.ipAddr == "192.168.148.3")} accessTo {y:service (y.name == "httpd1")}
+create security-condition reachability (name:"httpd32", rchType:"xyz") accessBy {x:host (x.ipAddr == "192.168.148.3")} accessTo {y:service (y.name == "httpd2")}
+create security-condition reachability (name:"httpd12", rchType:"xyz") accessBy {x:host (x.ipAddr == "192.168.148.1")} accessTo {y:service (y.name == "httpd2")}
+create security-condition reachability (name:"httpd21", rchType:"xyz") accessBy {x:host (x.ipAddr == "192.168.148.2")} accessTo {y:service (y.name == "httpd1")}
+
+create security-condition privilege (name:"user3", privType: "user") atHost {x:host (x.ipAddr == "192.168.148.3")}
+
+/*Exploits*/
+
+create security-condition privilege (name:"user1", privType: "user") atHost {x:host (x.ipAddr == "192.168.148.1")}
+create security-condition privilege (name:"user2", privType: "user") atHost {x:host (x.ipAddr == "192.168.148.2")}
+
+create exploit bofExploit(name:"bofExp31", category:"remote")
+ precond {x:privilege (x.name == "user3"), y:reachability (y.name == "httpd31")} 
+   postcond {x:privilege (x.name == "user1")}
+
+create exploit bofExploit(name:"bofExp32", category:"remote")
+ precond {x:privilege (x.name == "user3"), y:reachability (y.name == "httpd32")} 
+ postcond {x:privilege (x.name == "user2")}
+
+/*Select*/
+
+select x:host where (x.ipAddr=="192.168.148.3")
+select x:host where (x.ipAddr=="192.168.148.3") and (x.name=="h1")
+select x:host where (x.name=="h1") or (x.os== "win7")
+select x:host where (x.ipAddr=="192.168.148.5") or (x.ipAddr=="192.168.148.1")
+
+
+
+

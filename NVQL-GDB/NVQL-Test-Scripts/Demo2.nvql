@@ -1,0 +1,108 @@
+drop entity-type (host, network-domain, service, vulnerability, firewall, gateway)
+drop relation-type (memberOf, connects, atHost, accessTo, accessBy, hasVuln)
+drop security-condition-type(Reachability, Privilege)
+
+/*Entity Type Definitions*/
+
+define entity-type host (name:  string, ipAddr: string, macAddr: string, os:string)
+define entity-type network-domain (name:string, netAddr:string, subnetMask:string)
+define entity-type service (name:string, protocol:string, portNo:int, swName:string, swVer:string)
+define entity-type vulnerability (name:string, cveId:string)
+define entity-type firewall (name:string, ifCount:int, ifIpAddr:string, ifSubnetMask:string)
+define entity-type gateway (name:string, ifIpAddr:string, ifSubnetMask:string)
+
+/*relation Type Definitions*/
+
+define relation-type memberOf(since: time) between {host,firewall}, {network-domain}
+define relation-type connects (ifId: int) between {gateway}, {network-domain}
+define relation-type atHost () between {service, privilege}, {host,gateway}
+define relation-type accessTo () between {reachability} , {service}
+define relation-type accessBy () between {reachability} , {host, network-domain}
+define relation-type hasVuln () between {service} , {vulnerability}
+
+/*Constraint Definitions*/
+
+define unique host(ipAddr)
+define unique vulnerability (cveId)
+
+define cardinality memberOf 2:1
+define cardinality hasVuln 1:4
+
+/*Security Condition Type Definitions*/
+
+define security-condition-type Reachability (name:string, since: time) accessBy {network-domain, host} accessTo {service} 
+define security-condition-type Privilege (name: string, since:time, privType: string) atHost {host,gateway}
+
+
+/*Entities*/
+create entity host (name:"Attacker", ipAddr:"140.168.14.30", macAddr:"xx:xx:xx:xx:xx:xx", os:"Ubuntu")
+create entity host (name:"Web Server", ipAddr:"160.12.14.2", macAddr:"xx:xx:xx:xx:xx:xx", os:"Linux")
+create entity host (name:"Login Server", ipAddr:"160.12.14.3", macAddr:"xx:xx:xx:xx:xx:xx", os:"Linux")
+create entity host (name:"DB Server", ipAddr:"192.168.148.3", macAddr:"xx:xx:xx:xx:xx:xx", os:"Linux")
+
+create entity network-domain (name:"Internet", netAddr:"0.0.0.0",subnetMask:"0.0.0.0")
+create entity network-domain (name:"DMZ", netAddr:"160.12.14.0",subnetMask:"255.255.255.0")
+create entity network-domain (name:"Server Farm", netAddr:"192.168.148.0",subnetMask:"255.255.255.0")
+
+create entity firewall (name:"Firewall-1", ifCount:2, ifIpAddr:"192.168.148.1, 192.168.150.1", ifSubnetMask:"255.255.255.0, 255.255.255.0")
+create entity firewall (name:"Firewall-2", ifCount:2, ifIpAddr:"192.168.148.1, 192.168.150.1", ifSubnetMask:"255.255.255.0, 255.255.255.0")
+
+create entity service (name:"", protocol:"", portNo:3, swName:"", swVer:"")
+create entity service (name:"", protocol:"", portNo:3, swName:"", swVer:"")
+create entity service (name:"", protocol:"", portNo:3, swName:"", swVer:"")
+
+create entity vulnerability (name:"", cveId:"")
+create entity vulnerability (name:"", cveId:"")
+create entity vulnerability (name:"", cveId:"")
+
+/*Relations*/
+
+create relation x:host (x.ipAddr == "192.168.148.3") memberOf (since:"10:11:34") nd1:network-domain (nd1.netAddr == "192.168.148.3")
+
+
+/*Security Conditions*/
+
+
+
+/*Exploits*/
+/*
+
+
+
+*/
+
+/*Exploit Type Definitions*/
+
+define exploit-type sshdBofExploit(expType:string, vuln:string) 
+precond {Privilege (privType:"user",name:"user0"), Reachability} 
+postcond {Privilege (privType:"user")}
+
+define exploit-type mmBofExploit(expType:string, vuln:string) 
+precond {Privilege (privType:"user",name:"user0"), Reachability} 
+postcond {Privilege (privType:"user"), Reachability}
+
+create security-condition Privilege (name:"user1", since: "00:00:19", privType: "user") atHost {z:host (z.name == "h1")}
+
+create exploit sshdBofExploit(expType:"remote", vuln:"CVE-2006-1234") 
+precond {x:Privilege (x.name == "user0"), y:Reachability (y.name == "sshd01")} 
+postcond {x:Privilege (x.name == "user1")}
+
+create security-condition Privilege (name:"user1", since: "00:00:19", privType: "user") atHost {z:host (z.name == "h1")}
+
+create exploit sshdBofExploit(expType:"remot3e") 
+precond {x:Privilege (x.name == "user0"), y:Reachability (y.name == "sshd01")} 
+postcond {x:Privilege (x.name == "user1")}
+
+create security-condition Privilege (name:"user3", since: "00:00:19", privType: "user") atHost {z:host (z.name == "Attacker")}
+create security-condition Privilege (name:"user2", since: "00:00:19", privType: "user") atHost {z:host (z.name == "Attacker")}
+
+create exploit sshdBofExploit( vuln:"CVE-20206-1234")
+precond {x:Privilege (x.name == "user0"), y:Reachability (y.name == "sshd01")} 
+postcond {x:Privilege (x.name == "user3"),x:Privilege (x.name == "user2")}
+
+
+
+
+
+
+

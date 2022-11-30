@@ -1,0 +1,16 @@
+define entity-type host (name: string, ipAddr: string, macAddr: string, os:string)
+define entity-type network-domain (name:string, netAddr:string, subnetMask:string)
+//define entity-type firewall (name:string, ifCount:int, ifIpAddr:string, ifSubnetMask:string)
+
+define relation-type memberOf(since: time) between {host}, {network-domain}
+
+//drop entity-type (host, network-domain)
+
+create entity host (name:"h3", ipAddr:"192.168.148.1", macAddr:"xx:yy:zz:xx:xx:xx", os:"Ubuntu")
+create entity network-domain (name:"nd1", netAddr:"192.168.148.0",subnetMask:"255.255.255.0")
+
+create relation x:host (x.ipAddr == "192.168.148.1") memberOf (since:"10:11:34") y:network-domain (y.netAddr == "192.168.148.0")
+
+
+
+//delete x:host where (x.ipAddr=="192.168.148.3")
