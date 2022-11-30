@@ -1,0 +1,302 @@
+/*No. of Hosts = 20*/
+/*Max. No. of Connected Hosts per Host = 3*/
+/*No. of Services per Hosts = 2*/
+
+/*Entity Type Definitions*/
+
+define entity-type host (name: string, ipAddr: string, macAddr: string, os:string)
+define entity-type network-domain (name:string, netAddr:string, subnetMask:string)
+define entity-type service (name:string, protocol:string, portNo:int, swName:string, swVer:string)
+define entity-type vulnerability (name:string, cveId:string)
+define entity-type firewall (name:string, ifCount:int, ifIpAddr:string, ifSubnetMask:string)
+define entity-type gateway (name:string, ifCount:int, ifIpAddr:string, ifSubnetMask:string)
+define entity-type privilege (name: string, privType:string)
+define entity-type reachability (name: string, rchType:string)
+
+/*Relation Type Definitions*/
+
+define relation-type memberOf(since: time) between {host,firewall}, {network-domain}
+define relation-type connect (ifId: int) between {gateway}, {network-domain}
+define relation-type atHost () between {service, privilege}, {host,gateway}
+define relation-type accessTo () between {reachability} , {service}
+define relation-type accessBy () between {reachability} , {host, network-domain}
+define relation-type hasVuln () between {service} , {vulnerability}
+define relation-type runAt () between {service} , {host}
+
+/*Security Condition Type Definitions*/
+
+define security-condition-type reachability (name:string, since: time, rchType:string) accessBy {network-domain, host} accessTo {service}
+define security-condition-type privilege (name: string, since:time, privType: string) atHost {host,gateway}
+
+/*Constraint Definitions*/
+
+define unique host(ipAddr)
+define unique vulnerability (cveId)
+
+define cardinality memberOf n:1
+define cardinality hasVuln n:n
+
+/*Exploit Type Definitions*/
+
+define exploit-type dosArbitCodeExecExploit (name:string, category:string) CVE("CVE-2006-3747")
+	precond {privilege (privType:"user"), reachability (rchType:"appAccess")}
+	postcond {privilege (privType:"user")}
+
+define exploit-type arbitCodeExecExploit (name:string, category:string) CVE("CVE-2002-0640")
+	precond {privilege (privType:"user"), reachability (rchType:"appAccess")}
+	postcond {privilege (privType:"user")}
+
+define exploit-type dosFmtStringSpecExploit (name:string, category:string) CVE("CVE-2009-2446")
+	precond {privilege (privType:"user"), reachability (rchType:"appAccess")}
+	postcond {privilege (privType:"user")}
+
+/*Entities*/
+
+create entity host (name:"h1", ipAddr:"192.168.148.1", macAddr:"69:b4:b2:a9:ee:3b", os:"Linux")
+create entity service (name:"httpd1", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+create entity service (name:"sshd1", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+
+create entity host (name:"h2", ipAddr:"192.168.148.2", macAddr:"98:1e:fa:be:77:40", os:"Linux")
+create entity service (name:"mysqld2", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+create entity service (name:"sshd2", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+
+create entity host (name:"h3", ipAddr:"192.168.148.3", macAddr:"0c:94:07:82:ee:86", os:"Linux")
+create entity service (name:"sshd3", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+create entity service (name:"httpd3", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity host (name:"h4", ipAddr:"192.168.148.4", macAddr:"8f:5c:e9:62:28:83", os:"Linux")
+create entity service (name:"mysqld4", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+create entity service (name:"sshd4", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+
+create entity host (name:"h5", ipAddr:"192.168.148.5", macAddr:"56:f8:00:f1:53:97", os:"Linux")
+create entity service (name:"sshd5", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+create entity service (name:"mysqld5", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+
+create entity host (name:"h6", ipAddr:"192.168.148.6", macAddr:"63:a5:5d:bf:24:a2", os:"Linux")
+create entity service (name:"mysqld6", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+create entity service (name:"sshd6", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+
+create entity host (name:"h7", ipAddr:"192.168.148.7", macAddr:"a4:d4:cc:f9:65:34", os:"Linux")
+create entity service (name:"sshd7", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+create entity service (name:"httpd7", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity host (name:"h8", ipAddr:"192.168.148.8", macAddr:"11:05:65:1d:db:b3", os:"Linux")
+create entity service (name:"mysqld8", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+create entity service (name:"httpd8", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity host (name:"h9", ipAddr:"192.168.148.9", macAddr:"d8:86:11:ac:5f:27", os:"Linux")
+create entity service (name:"mysqld9", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+create entity service (name:"httpd9", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity host (name:"h10", ipAddr:"192.168.148.10", macAddr:"c6:de:90:89:20:d5", os:"Linux")
+create entity service (name:"httpd10", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+create entity service (name:"mysqld10", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+
+create entity host (name:"h11", ipAddr:"192.168.148.11", macAddr:"7a:d9:e7:f3:4a:d2", os:"Linux")
+create entity service (name:"mysqld11", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+create entity service (name:"httpd11", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity host (name:"h12", ipAddr:"192.168.148.12", macAddr:"1f:70:68:22:c6:4d", os:"Linux")
+create entity service (name:"sshd12", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+create entity service (name:"mysqld12", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+
+create entity host (name:"h13", ipAddr:"192.168.148.13", macAddr:"2f:4f:34:b3:87:41", os:"Linux")
+create entity service (name:"sshd13", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+create entity service (name:"mysqld13", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+
+create entity host (name:"h14", ipAddr:"192.168.148.14", macAddr:"38:80:a0:04:54:18", os:"Linux")
+create entity service (name:"sshd14", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+create entity service (name:"mysqld14", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+
+create entity host (name:"h15", ipAddr:"192.168.148.15", macAddr:"5d:9b:36:3a:d2:19", os:"Linux")
+create entity service (name:"mysqld15", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+create entity service (name:"httpd15", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity host (name:"h16", ipAddr:"192.168.148.16", macAddr:"6e:e3:07:27:fb:d8", os:"Linux")
+create entity service (name:"mysqld16", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+create entity service (name:"httpd16", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity host (name:"h17", ipAddr:"192.168.148.17", macAddr:"16:19:97:fa:cd:ad", os:"Linux")
+create entity service (name:"mysqld17", protocol:"tcp", portNo:3306, swName:"MySQL", swVer:"4.0.0")
+create entity service (name:"httpd17", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity host (name:"h18", ipAddr:"192.168.148.18", macAddr:"33:96:9d:a9:f0:e7", os:"Linux")
+create entity service (name:"httpd18", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+create entity service (name:"sshd18", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+
+create entity host (name:"h19", ipAddr:"192.168.148.19", macAddr:"35:7b:ca:49:79:c2", os:"Linux")
+create entity service (name:"sshd19", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+create entity service (name:"httpd19", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity host (name:"h20", ipAddr:"192.168.148.20", macAddr:"4a:37:5f:2f:55:4f", os:"Linux")
+create entity service (name:"sshd20", protocol:"tcp", portNo:22, swName:"OpenSSH", swVer:"2.3.1")
+create entity service (name:"httpd20", protocol:"tcp", portNo:80, swName:"Apache-WS", swVer:"1.3")
+
+create entity vulnerability (name:"vuln1", cveId:"CVE-2006-3747")
+create entity vulnerability (name:"vuln2", cveId:"CVE-2002-0640")
+create entity vulnerability (name:"vuln3", cveId:"CVE-2009-2446")
+
+/*Relations*/
+
+create relation x:service (x.name == "httpd1") runAt() y:host (y.ipAddr == "192.168.148.1")
+create relation x:service (x.name == "sshd1") runAt() y:host (y.ipAddr == "192.168.148.1")
+create relation x:service (x.name == "mysqld2") runAt() y:host (y.ipAddr == "192.168.148.2")
+create relation x:service (x.name == "sshd2") runAt() y:host (y.ipAddr == "192.168.148.2")
+create relation x:service (x.name == "sshd3") runAt() y:host (y.ipAddr == "192.168.148.3")
+create relation x:service (x.name == "httpd3") runAt() y:host (y.ipAddr == "192.168.148.3")
+create relation x:service (x.name == "mysqld4") runAt() y:host (y.ipAddr == "192.168.148.4")
+create relation x:service (x.name == "sshd4") runAt() y:host (y.ipAddr == "192.168.148.4")
+create relation x:service (x.name == "sshd5") runAt() y:host (y.ipAddr == "192.168.148.5")
+create relation x:service (x.name == "mysqld5") runAt() y:host (y.ipAddr == "192.168.148.5")
+create relation x:service (x.name == "mysqld6") runAt() y:host (y.ipAddr == "192.168.148.6")
+create relation x:service (x.name == "sshd6") runAt() y:host (y.ipAddr == "192.168.148.6")
+create relation x:service (x.name == "sshd7") runAt() y:host (y.ipAddr == "192.168.148.7")
+create relation x:service (x.name == "httpd7") runAt() y:host (y.ipAddr == "192.168.148.7")
+create relation x:service (x.name == "mysqld8") runAt() y:host (y.ipAddr == "192.168.148.8")
+create relation x:service (x.name == "httpd8") runAt() y:host (y.ipAddr == "192.168.148.8")
+create relation x:service (x.name == "mysqld9") runAt() y:host (y.ipAddr == "192.168.148.9")
+create relation x:service (x.name == "httpd9") runAt() y:host (y.ipAddr == "192.168.148.9")
+create relation x:service (x.name == "httpd10") runAt() y:host (y.ipAddr == "192.168.148.10")
+create relation x:service (x.name == "mysqld10") runAt() y:host (y.ipAddr == "192.168.148.10")
+create relation x:service (x.name == "mysqld11") runAt() y:host (y.ipAddr == "192.168.148.11")
+create relation x:service (x.name == "httpd11") runAt() y:host (y.ipAddr == "192.168.148.11")
+create relation x:service (x.name == "sshd12") runAt() y:host (y.ipAddr == "192.168.148.12")
+create relation x:service (x.name == "mysqld12") runAt() y:host (y.ipAddr == "192.168.148.12")
+create relation x:service (x.name == "sshd13") runAt() y:host (y.ipAddr == "192.168.148.13")
+create relation x:service (x.name == "mysqld13") runAt() y:host (y.ipAddr == "192.168.148.13")
+create relation x:service (x.name == "sshd14") runAt() y:host (y.ipAddr == "192.168.148.14")
+create relation x:service (x.name == "mysqld14") runAt() y:host (y.ipAddr == "192.168.148.14")
+create relation x:service (x.name == "mysqld15") runAt() y:host (y.ipAddr == "192.168.148.15")
+create relation x:service (x.name == "httpd15") runAt() y:host (y.ipAddr == "192.168.148.15")
+create relation x:service (x.name == "mysqld16") runAt() y:host (y.ipAddr == "192.168.148.16")
+create relation x:service (x.name == "httpd16") runAt() y:host (y.ipAddr == "192.168.148.16")
+create relation x:service (x.name == "mysqld17") runAt() y:host (y.ipAddr == "192.168.148.17")
+create relation x:service (x.name == "httpd17") runAt() y:host (y.ipAddr == "192.168.148.17")
+create relation x:service (x.name == "httpd18") runAt() y:host (y.ipAddr == "192.168.148.18")
+create relation x:service (x.name == "sshd18") runAt() y:host (y.ipAddr == "192.168.148.18")
+create relation x:service (x.name == "sshd19") runAt() y:host (y.ipAddr == "192.168.148.19")
+create relation x:service (x.name == "httpd19") runAt() y:host (y.ipAddr == "192.168.148.19")
+create relation x:service (x.name == "sshd20") runAt() y:host (y.ipAddr == "192.168.148.20")
+create relation x:service (x.name == "httpd20") runAt() y:host (y.ipAddr == "192.168.148.20")
+
+create relation x:service (x.name == "httpd1") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "sshd1") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "mysqld2") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "sshd2") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "sshd3") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "httpd3") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "mysqld4") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "sshd4") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "sshd5") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "mysqld5") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "mysqld6") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "sshd6") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "sshd7") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "httpd7") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "mysqld8") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "httpd8") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "mysqld9") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "httpd9") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "httpd10") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "mysqld10") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "mysqld11") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "httpd11") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "sshd12") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "mysqld12") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "sshd13") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "mysqld13") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "sshd14") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "mysqld14") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "mysqld15") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "httpd15") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "mysqld16") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "httpd16") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "mysqld17") hasVuln() y:vulnerability (y.cveId == "CVE-2009-2446")
+create relation x:service (x.name == "httpd17") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "httpd18") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "sshd18") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "sshd19") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "httpd19") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+create relation x:service (x.name == "sshd20") hasVuln() y:vulnerability (y.cveId == "CVE-2002-0640")
+create relation x:service (x.name == "httpd20") hasVuln() y:vulnerability (y.cveId == "CVE-2006-3747")
+
+/* Security Conditions*/
+
+create security-condition reachability (name:"mysqld171", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.1")} accessTo {y:service (y.name == "mysqld17")}
+create security-condition reachability (name:"httpd171", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.1")} accessTo {y:service (y.name == "httpd17")}
+create security-condition reachability (name:"mysqld42", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.2")} accessTo {y:service (y.name == "mysqld4")}
+create security-condition reachability (name:"sshd42", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.2")} accessTo {y:service (y.name == "sshd4")}
+create security-condition reachability (name:"httpd182", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.2")} accessTo {y:service (y.name == "httpd18")}
+create security-condition reachability (name:"sshd182", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.2")} accessTo {y:service (y.name == "sshd18")}
+create security-condition reachability (name:"sshd122", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.2")} accessTo {y:service (y.name == "sshd12")}
+create security-condition reachability (name:"mysqld122", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.2")} accessTo {y:service (y.name == "mysqld12")}
+create security-condition reachability (name:"sshd123", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.3")} accessTo {y:service (y.name == "sshd12")}
+create security-condition reachability (name:"mysqld123", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.3")} accessTo {y:service (y.name == "mysqld12")}
+create security-condition reachability (name:"mysqld173", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.3")} accessTo {y:service (y.name == "mysqld17")}
+create security-condition reachability (name:"httpd173", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.3")} accessTo {y:service (y.name == "httpd17")}
+create security-condition reachability (name:"sshd144", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.4")} accessTo {y:service (y.name == "sshd14")}
+create security-condition reachability (name:"mysqld144", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.4")} accessTo {y:service (y.name == "mysqld14")}
+create security-condition reachability (name:"mysqld94", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.4")} accessTo {y:service (y.name == "mysqld9")}
+create security-condition reachability (name:"httpd94", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.4")} accessTo {y:service (y.name == "httpd9")}
+create security-condition reachability (name:"mysqld175", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.5")} accessTo {y:service (y.name == "mysqld17")}
+create security-condition reachability (name:"httpd175", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.5")} accessTo {y:service (y.name == "httpd17")}
+create security-condition reachability (name:"mysqld25", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.5")} accessTo {y:service (y.name == "mysqld2")}
+create security-condition reachability (name:"sshd25", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.5")} accessTo {y:service (y.name == "sshd2")}
+create security-condition reachability (name:"sshd206", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.6")} accessTo {y:service (y.name == "sshd20")}
+create security-condition reachability (name:"httpd206", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.6")} accessTo {y:service (y.name == "httpd20")}
+create security-condition reachability (name:"sshd76", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.6")} accessTo {y:service (y.name == "sshd7")}
+create security-condition reachability (name:"httpd76", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.6")} accessTo {y:service (y.name == "httpd7")}
+create security-condition reachability (name:"mysqld156", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.6")} accessTo {y:service (y.name == "mysqld15")}
+create security-condition reachability (name:"httpd156", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.6")} accessTo {y:service (y.name == "httpd15")}
+create security-condition reachability (name:"sshd57", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.7")} accessTo {y:service (y.name == "sshd5")}
+create security-condition reachability (name:"mysqld57", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.7")} accessTo {y:service (y.name == "mysqld5")}
+create security-condition reachability (name:"sshd148", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.8")} accessTo {y:service (y.name == "sshd14")}
+create security-condition reachability (name:"mysqld148", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.8")} accessTo {y:service (y.name == "mysqld14")}
+create security-condition reachability (name:"mysqld178", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.8")} accessTo {y:service (y.name == "mysqld17")}
+create security-condition reachability (name:"httpd178", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.8")} accessTo {y:service (y.name == "httpd17")}
+create security-condition reachability (name:"sshd208", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.8")} accessTo {y:service (y.name == "sshd20")}
+create security-condition reachability (name:"httpd208", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.8")} accessTo {y:service (y.name == "httpd20")}
+create security-condition reachability (name:"mysqld169", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.9")} accessTo {y:service (y.name == "mysqld16")}
+create security-condition reachability (name:"httpd169", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.9")} accessTo {y:service (y.name == "httpd16")}
+create security-condition reachability (name:"sshd149", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.9")} accessTo {y:service (y.name == "sshd14")}
+create security-condition reachability (name:"mysqld149", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.9")} accessTo {y:service (y.name == "mysqld14")}
+create security-condition reachability (name:"mysqld1510", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.10")} accessTo {y:service (y.name == "mysqld15")}
+create security-condition reachability (name:"httpd1510", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.10")} accessTo {y:service (y.name == "httpd15")}
+create security-condition reachability (name:"httpd111", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.11")} accessTo {y:service (y.name == "httpd1")}
+create security-condition reachability (name:"sshd111", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.11")} accessTo {y:service (y.name == "sshd1")}
+create security-condition reachability (name:"httpd1812", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.12")} accessTo {y:service (y.name == "httpd18")}
+create security-condition reachability (name:"sshd1812", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.12")} accessTo {y:service (y.name == "sshd18")}
+create security-condition reachability (name:"mysqld413", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.13")} accessTo {y:service (y.name == "mysqld4")}
+create security-condition reachability (name:"sshd413", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.13")} accessTo {y:service (y.name == "sshd4")}
+create security-condition reachability (name:"sshd314", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.14")} accessTo {y:service (y.name == "sshd3")}
+create security-condition reachability (name:"httpd314", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.14")} accessTo {y:service (y.name == "httpd3")}
+create security-condition reachability (name:"sshd1315", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.15")} accessTo {y:service (y.name == "sshd13")}
+create security-condition reachability (name:"mysqld1315", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.15")} accessTo {y:service (y.name == "mysqld13")}
+create security-condition reachability (name:"sshd1415", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.15")} accessTo {y:service (y.name == "sshd14")}
+create security-condition reachability (name:"mysqld1415", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.15")} accessTo {y:service (y.name == "mysqld14")}
+create security-condition reachability (name:"mysqld615", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.15")} accessTo {y:service (y.name == "mysqld6")}
+create security-condition reachability (name:"sshd615", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.15")} accessTo {y:service (y.name == "sshd6")}
+create security-condition reachability (name:"sshd1916", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.16")} accessTo {y:service (y.name == "sshd19")}
+create security-condition reachability (name:"httpd1916", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.16")} accessTo {y:service (y.name == "httpd19")}
+create security-condition reachability (name:"mysqld916", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.16")} accessTo {y:service (y.name == "mysqld9")}
+create security-condition reachability (name:"httpd916", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.16")} accessTo {y:service (y.name == "httpd9")}
+create security-condition reachability (name:"mysqld1117", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.17")} accessTo {y:service (y.name == "mysqld11")}
+create security-condition reachability (name:"httpd1117", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.17")} accessTo {y:service (y.name == "httpd11")}
+create security-condition reachability (name:"sshd1417", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.17")} accessTo {y:service (y.name == "sshd14")}
+create security-condition reachability (name:"mysqld1417", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.17")} accessTo {y:service (y.name == "mysqld14")}
+create security-condition reachability (name:"mysqld917", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.17")} accessTo {y:service (y.name == "mysqld9")}
+create security-condition reachability (name:"httpd917", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.17")} accessTo {y:service (y.name == "httpd9")}
+create security-condition reachability (name:"mysqld1718", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.18")} accessTo {y:service (y.name == "mysqld17")}
+create security-condition reachability (name:"httpd1718", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.18")} accessTo {y:service (y.name == "httpd17")}
+create security-condition reachability (name:"sshd1318", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.18")} accessTo {y:service (y.name == "sshd13")}
+create security-condition reachability (name:"mysqld1318", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.18")} accessTo {y:service (y.name == "mysqld13")}
+create security-condition reachability (name:"sshd1918", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.18")} accessTo {y:service (y.name == "sshd19")}
+create security-condition reachability (name:"httpd1918", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.18")} accessTo {y:service (y.name == "httpd19")}
+create security-condition reachability (name:"httpd119", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.19")} accessTo {y:service (y.name == "httpd1")}
+create security-condition reachability (name:"sshd119", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.19")} accessTo {y:service (y.name == "sshd1")}
+create security-condition reachability (name:"httpd1020", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.20")} accessTo {y:service (y.name == "httpd10")}
+create security-condition reachability (name:"mysqld1020", rchType:"appAccess") accessBy {x:host (x.ipAddr == "192.168.148.20")} accessTo {y:service (y.name == "mysqld10")}
+
+create security-condition privilege (name:"user1", privType: "user") atHost {x:host (x.ipAddr == "192.168.148.1")}
+
+

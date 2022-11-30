@@ -1,0 +1,753 @@
+options
+{STATIC = false; }
+
+PARSER_BEGIN(NVQLParser)
+
+//import statements
+
+import java.io.*;
+import java.net.*;
+import java.nio.*;
+import java.sql.*;
+import java.util.*;
+import java.lang.*;
+import javafx.util.Pair;
+
+
+/*===================================================================*/
+/*                                                                   */
+/*                                                                   */
+/*===================================================================*/
+
+class NVQLParser {
+
+        Connection con=null;
+        long startTime, endTime;
+        NVQLInitPgsqlDB t = new NVQLInitPgsqlDB("localhost", "5432", "NVQL", "postgres", "abcdefgh");
+        NVQLQueryExecTime timeobj = new NVQLQueryExecTime();//processing time calculation 
+
+        {
+                System.out.println("Starting...");       
+                try{
+                        con = t.getConnection();
+                        t.createDefStores();
+                        initParser();
+                }
+                catch(Exception e){
+                        //System.out.println("Syntax check failed: "+e);
+
+                }
+        }
+}
+
+
+PARSER_END (NVQLParser)
+
+/*===================================================================*/
+/*                                                                   */
+/*                                                                   */
+/*===================================================================*/
+
+
+<*> SKIP :
+{
+        <"\n" | "\r" | "\r\n" |"\\"|"\t"|" "> //White space
+        |<"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n") ? > //Single-line comments
+        |<"/*" (~["/"])*  "*" "/" > //Multi-line comments
+}
+/*===================================================================*/
+/*                                                                   */
+/*                                                                   */
+/*===================================================================*/
+TOKEN [IGNORE_CASE] : /* NVQL Keywords*/
+{
+        <ETDCMD : "DEFINE ENTITY-TYPE">
+        |<RTDCMD : "DEFINE RELATION-TYPE">
+        |<SCDCMD : "DEFINE SECURITY-CONDITION-TYPE">
+        |<EXDCMD : "DEFINE EXPLOIT-TYPE">
+        |<UCDCMD : "DEFINE UNIQUE">
+        |<CCDCMD : "DEFINE CARDINALITY">
+        |<CECMD : "CREATE ENTITY">
+        |<CRCMD : "CREATE RELATION">
+        |<CSECCMD : "CREATE SECURITY-CONDITION">
+        |<CEXPCMD : "CREATE EXPLOIT">
+        |<SELECT : "SELECT">
+        |<BETWEEN : "BETWEEN">
+        |<PRECOND : "PRECOND">
+        |<POSTCOND : "POSTCOND">
+        |<WHERE : "WHERE">
+        |<ON : "ON">
+        |<FROM : "FROM">
+        |<TO : "TO">
+        |<DELETE : "DELETE">
+        |<DROP : "DROP">
+        |<ET : "ENTITY-TYPE">
+        |<RT : "RELATION-TYPE">
+        |<SCT : "SECURITY-CONDITION-TYPE">
+        |<EXT : "EXPLOIT-TYPE">
+        |<N: "N">
+        |<CVE: "CVE">
+}
+
+/*===================================================================*/
+/*                                                                   */
+/*                                                                   */
+/*===================================================================*/
+TOKEN [IGNORE_CASE] : /* NVQL Punctuation Symbols*/
+{
+        <LBRACE : "{">
+        |<RBRACE : "}">
+        |<LPAREN : "(">
+        |<RPAREN : ")">
+        |<COMMA : ",">
+        |<COLON : ":">
+        |<DOT : ".">
+}
+
+/*===================================================================*/
+/*                                                                   */
+/*                                                                   */
+/*===================================================================*/
+
+TOKEN [IGNORE_CASE]: /* NVQL Logical and Relational Operators*/
+{
+	<EQUALS : "==">
+	|<NOTEQUAL : "!=">
+	|<LT : "<">
+	|<LTE : "<=">
+	|<GT : ">">
+	|<GTE : ">=">
+	|<AND : "AND">
+	|<OR : "OR">
+}
+
+/*===================================================================*/
+/*                                                                   */
+/*                                                                   */
+/*===================================================================*/
+TOKEN : /*NVQL Terminals*/
+{
+        <NUMBER : (["0"-"9"])+>
+        |<DATATYPE : "string"|"int"|"time">
+        |<ID : (["A"-"Z", "a"-"z"])(["A"-"Z", "a"-"z", "0"-"9", "-", "_"])*>
+        |<QUOTED_STRING : "\"" (~["\""])* "\"" >
+}
+
+/*===================================================================*/
+/*                                                                   */
+/*                                                                   */
+/*===================================================================*/
+
+void initParser() throws Exception :
+{
+
+}
+{
+        (parseEntityTypeDefQuery()|parseCreateEntityQuery()|parseRelationTypeDefQuery()
+        |parseCreateRelationQuery()|parseUCDefQuery()|parseCCDefQuery()|parseDropQuery()
+        |parseDeleteQuery()|parseSelectQuery()|parseSecCondDefQuery()|parseExpDefQuery()
+        |parseSecCondCreateQuery()|parseExpQuery())*
+
+        //(etDefQuery()|ceQuery()|rtDefQuery()|crQuery()|ucDefQuery()|ccDefQuery()|scDefQuery()|expDefQuery()|sltQuery())*
+        <EOF>
+}
+
+Token numOfEntity() :
+{
+        Token num;
+}
+{
+        (num = <NUMBER>|num = <N>)
+         {
+                 return num; 
+         }
+}
+
+String parseEntityTypeName() :
+{
+        Token etname;
+}
+{
+        etname = <ID> {return etname.image; }
+}
+
+String parseSecCondTypeName() :
+{
+        Token scname;
+}
+{
+        scname = <ID> {return scname.image; }
+}
+
+String parseExploitTypeName() :
+{
+        Token expTypeName;
+}
+{
+        expTypeName = <ID> {return expTypeName.image; }
+}
+
+String parseEntityTypeNameList() :
+{
+        Token etname = null;
+        String etnameList = "";
+}
+{
+        etname = <ID> 
+        {
+               etnameList = etnameList + etname.image;
+        }
+        (<COMMA> etname = <ID>
+        {
+               etnameList = etnameList + "," + etname.image;  
+        })*
+        {
+        etnameList = etnameList;
+        return etnameList;
+        }
+}
+
+String parseRelationTypeName() :
+{
+        Token rtname;
+}
+{
+        rtname = <ID> {return rtname.image; }
+}
+
+String parseEntityVar():
+{
+        Token eVar;
+}
+{
+	eVar = <ID> {return eVar.image;}
+}
+
+String parseRelationVar() :
+{
+        Token rVar;
+}
+{
+        rVar = <ID> {return rVar.image; }
+}
+
+
+String parseAttrName() :
+{
+        Token aName;
+}
+{
+        aName = <ID> {return aName.image;}
+}
+
+String parseAttrDef() :
+{
+        String aName;
+        Token aValDomain;
+}
+{
+        aName = parseAttrName() <COLON> aValDomain = <DATATYPE> {return (aName + ":" + aValDomain.image); }
+}
+
+String parseAttrVal() :
+{
+        String aName="";
+        Token aVal;
+}
+{
+        aName = parseAttrName() <COLON> (aVal = <QUOTED_STRING>  {return ("$"+aName + "$:#" + aVal.image+"#"); }
+                                    |  aVal = <NUMBER>  {return ("$"+aName + "$:#" + aVal.image+"#"); })
+        //aName = parseAttrName() <COLON> (aVal = <QUOTED_STRING>  {return (aName + ":" + aVal.image); }
+        //                            |  aVal = <NUMBER>  {return (aName + ":" + aVal.image); })
+}
+
+String parseAttrDefList() :
+{
+        String aDef;
+        String aDefList = "";
+}
+{
+        aDef = parseAttrDef() {
+               aDefList = aDefList + aDef;
+        }
+        (<COMMA> aDef = parseAttrDef() {
+                aDefList = aDefList + ", " + aDef;
+         })* {aDefList = aDefList; return aDefList; }
+}
+
+String parseAttrValList() :
+{
+        String attrVal;
+        String attrValList = "";
+}
+{
+        attrVal = parseAttrVal() {
+                attrValList = attrValList + attrVal;
+        }
+        (<COMMA> attrVal = parseAttrVal() {
+                 attrValList = attrValList + ", " + attrVal;
+         })* {attrValList = attrValList; return attrValList; }
+}
+
+String parseIdList() :
+{
+        Token idName;
+        String idNameList = "";
+}
+{
+        idName = <ID> {idNameList = idNameList + idName.image; }
+        (<COMMA> idName = <ID> {idNameList = idNameList + "," + idName.image; })*  {idNameList = idNameList ; return idNameList; }
+}
+
+void parseEntityTypeDefQuery() :
+{
+        String entityTypeName, attrDefList="";
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <ETDCMD>  entityTypeName = parseEntityTypeName() <LPAREN> (attrDefList = parseAttrDefList()) ? <RPAREN>
+
+        {
+                System.out.println("Encountered: define entity-type " + entityTypeName + " (" + attrDefList + ")");
+                //startTime=System.nanoTime();
+                NVQLEntityType etDef = new NVQLEntityType(entityTypeName, attrDefList, con);
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+
+                
+        }
+}
+
+void parseCreateEntityQuery() :
+{
+        String entityTypeName, attrValList="";
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <CECMD>  entityTypeName = parseEntityTypeName() <LPAREN> (attrValList = parseAttrValList()) ? <RPAREN>
+        {
+                System.out.println("Encountered: create entity " + entityTypeName + " (" + attrValList + ")");
+                //Next Line is meant for start calculating the entire time that the query
+                //startTime=System.nanoTime();
+                NVQLEntity e = new NVQLEntity(entityTypeName, attrValList, con);
+                //Next part is meant for stop calculating the entire time that the query
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+                
+        }
+}
+
+void parseRelationTypeDefQuery() :
+{
+        String relationTypeName, attrDefList="", srcEntityType, tgtEntityType, fromentity="", toentity="";
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <RTDCMD>  relationTypeName = parseRelationTypeName()  
+        <LPAREN> (attrDefList = parseAttrDefList()) ? <RPAREN> <BETWEEN> 
+        <LBRACE> srcEntityType = parseEntityTypeNameList() <RBRACE> <COMMA> 
+        <LBRACE> tgtEntityType = parseEntityTypeNameList() <RBRACE>
+        {
+                System.out.println("Encountered: define relation-type " + relationTypeName + " (" + attrDefList + ") between {"+srcEntityType+"}, {"+tgtEntityType+"}");
+                //Next Line is meant for start calculating the entire time that the query
+                //startTime=System.nanoTime();
+                NVQLRelationType etDef = new NVQLRelationType(relationTypeName, attrDefList, srcEntityType, tgtEntityType, con);
+                //Next part is meant for stop calculating the entire time that the query
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+        }
+}
+
+void parseCreateRelationQuery() :
+{
+        String vt1, vt2;
+        ArrayList<String> pred1, pred2;
+        String rName;
+        String relationAttrValList = "";
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <CRCMD> vt1 = parseVarType() pred1 = parseValPredicate() rName = parseRelationTypeName() <LPAREN> (relationAttrValList = parseAttrValList()) ?  <RPAREN> 
+                vt2 = parseVarType() pred2 = parseValPredicate()
+        {
+                System.out.println("Encountered: create relation " + vt1 + " (" + pred1.get(0) + "." 
+                + pred1.get(1) + pred1.get(2) +pred1.get(3) + ") " + rName + " (" + relationAttrValList + ") " + vt2 + " (" + pred2.get(0) + "." 
+                + pred2.get(1) + pred2.get(2) +pred2.get(3) + ")");
+                //Next Line is meant for start calculating the entire time that the query
+                //startTime=System.nanoTime();
+                NVQLRelation.createRelation(vt1, pred1, rName, relationAttrValList, vt2, pred2, con);
+                //Next part is meant for stop calculating the entire time that the query
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+                
+                
+        }
+}
+
+void parseUCDefQuery() :
+{
+        String entityType, attrList = "";
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <UCDCMD>  entityType = parseEntityTypeName() <LPAREN> ( attrList = parseIdList()) ? <RPAREN>
+        {
+                System.out.println("Encountered: define unique " + entityType + " (" + attrList + ")");
+                //startTime=System.nanoTime();
+                NVQLUCDef ucDef = new NVQLUCDef(entityType, attrList, con);
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+        }
+}
+
+void parseCCDefQuery() :
+{
+        String relationType;
+        Token num1,num2;
+        int n1,n2;
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <CCDCMD> relationType = parseRelationTypeName() num1 = numOfEntity() <COLON> num2 = numOfEntity()
+        {
+                System.out.println("Encountered: define cardinality " + relationType + " " + num1.image+ ":" + num2.image);
+                //startTime=System.nanoTime();
+                if(num1.image.equals("n")||num1.image.equals("N"))
+                        n1=Integer.MAX_VALUE;
+                else
+                        n1=Integer.parseInt(num1.image);
+                
+                if (num2.image.equals("n")||num2.image.equals("N"))
+                        n2=Integer.MAX_VALUE;
+                else
+                        n2=Integer.parseInt(num2.image);
+                
+                NVQLCCDef.CardinalityConstraintDef(relationType, n1, n2, con);
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+        }
+}
+
+void parseDropQuery():
+{
+        String dropSyntax = "";
+        String nameList = ""; 
+        Token defi;
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <DROP> (defi = <ET> <LPAREN> nameList=parseIdList() <RPAREN> 
+        |defi = <RT>  <LPAREN> nameList=parseIdList() <RPAREN> 
+        |defi = <SCT>  <LPAREN> nameList=parseIdList() <RPAREN> 
+        |defi = <EXT> <LPAREN> nameList=parseIdList() <RPAREN>)
+        {
+                dropSyntax = defi.image + " (" + nameList + ")";
+                System.out.println("Encountered: " + "drop " + dropSyntax);
+                //startTime=System.nanoTime();
+                NVQLDrop agDrop = new NVQLDrop(dropSyntax, con);
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+        }
+}
+
+String parseVarType():
+{
+        Token var, type;
+}
+{
+        var = <ID> <COLON> type = <ID>
+        {
+                return (var.image + ":" + type.image);
+        }
+}
+
+ArrayList<String> parseRelPredicate():
+{
+        Token var1, var2;
+        String entityType1, entityType2, relationType;  
+}
+{
+        <LPAREN> var1 = <ID> <COLON> entityType1 = parseEntityTypeName() 
+        relationType = parseRelationTypeName() 
+        var2 = <ID> <COLON> entityType2 = parseEntityTypeName() <RPAREN>
+        {
+                ArrayList<String> obj = new ArrayList<String>();
+                obj.add(var1.image);//variable name
+                obj.add(entityType1); //entityType name
+                obj.add(relationType);//relationType name
+                obj.add(var2.image);//variable name
+                obj.add(entityType2); //entityType name
+
+                return obj;
+        }
+}
+
+ArrayList<String> parseValPredicate():
+{
+        Token var, attr, relop, val;  
+}
+{
+        <LPAREN> var = <ID> <DOT> attr = <ID> (relop = <EQUALS>|relop = <NOTEQUAL>|relop = <LT>|relop = <LTE>|relop = <GT>|relop = <GTE>)
+        (val = <QUOTED_STRING> | val = <NUMBER>) <RPAREN>
+        {
+                ArrayList<String> obj = new ArrayList<String>();
+                obj.add(var.image);//variable name
+                obj.add(attr.image); //attribute name
+                obj.add(relop.image); //relational operator
+                obj.add(val.image); // value
+
+                return obj;
+        }
+}
+
+void parseDeleteQuery():
+{
+        String deleteSyntax=""; 
+        String vt;
+        ArrayList<String> pred;
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <DELETE> vt = parseVarType() <WHERE> pred = parseValPredicate()
+        {
+                deleteSyntax = vt + " where (" +pred.get(0)+"."+pred.get(1)+pred.get(2)+pred.get(3)+")";
+                System.out.println("Encountered: " + "delete " + deleteSyntax);
+                //startTime=System.nanoTime();
+                NVQLDelete.delete(vt, pred, con);
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+        }
+}
+
+void parseSelectQuery():
+{
+        String selectSyntax=""; 
+        String vt;
+        Token oper=null;
+        ArrayList<String> pred;
+        ArrayList<String> relop = new ArrayList<String>();
+        ArrayList<ArrayList<String>> selectpred = new ArrayList<ArrayList<String>>();
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <SELECT> vt = parseVarType() <WHERE> ( LOOKAHEAD(3) pred = parseValPredicate() | pred = parseRelPredicate() )
+        {
+                selectpred.add(pred);         
+        }
+        ((oper = <AND>|oper = <OR>)( LOOKAHEAD(3) pred = parseValPredicate() | pred = parseRelPredicate() )
+        {
+                relop.add(oper.image);
+                selectpred.add(pred);
+        })*
+        {
+                selectSyntax = vt + " where";
+                selectSyntax = NVQLSelect.querydisplay(selectSyntax , selectpred, relop);
+                System.out.println("Encountered: " + "select " + selectSyntax);
+                //startTime=System.nanoTime();
+                NVQLSelect.select(vt, selectpred, relop, con);
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+        }
+}
+
+void parseSecCondDefQuery() :
+{
+        String secCondTypeName,relationTypeName,EntityTypeName;
+        String attrDefList="", SecCondDefSyntax=""; 
+        ArrayList<String> relationTypeNameList = new ArrayList<String>();
+        ArrayList<String> EntityTypeNameList = new ArrayList<String>();
+                
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <SCDCMD>  secCondTypeName = parseSecCondTypeName() <LPAREN> (attrDefList = parseAttrDefList())? <RPAREN>  
+        relationTypeName = parseRelationTypeName()  <LBRACE> EntityTypeName = parseEntityTypeNameList() <RBRACE>
+        {
+             relationTypeNameList.add(relationTypeName); 
+             EntityTypeNameList.add(EntityTypeName);
+        }
+        (relationTypeName = parseRelationTypeName()  <LBRACE> EntityTypeName = parseEntityTypeNameList() <RBRACE>
+        {
+             relationTypeNameList.add(relationTypeName); 
+             EntityTypeNameList.add(EntityTypeName);
+        })*
+        {
+        
+        SecCondDefSyntax = NVQLSecCondType.querydisplay(relationTypeNameList, EntityTypeNameList) ;
+        System.out.println("Encountered: define security-condition-type "+ secCondTypeName + " (" +attrDefList +") "+SecCondDefSyntax);
+        //startTime=System.nanoTime();
+        NVQLSecCondType.createSecCondType(secCondTypeName, attrDefList, relationTypeNameList, EntityTypeNameList, con);
+        endTime=System.nanoTime();
+        timeobj.displayTime(startTime,endTime);
+        }
+}
+void parseSecCondCreateQuery() :
+{
+        Token secCondName;
+        String relationTypeName,vt;
+        ArrayList<String> pred;
+        ArrayList<String> relationTypeNameList = new ArrayList<String>();        
+        ArrayList<String> relationCond = new ArrayList<String>();
+        ArrayList<ArrayList<String>> EntityRelCondList = new ArrayList<ArrayList<String>>();
+        String SecCondSyntax="",attrValList = ""; 
+                
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <CSECCMD>  secCondName = <ID> <LPAREN> (attrValList = parseAttrValList())? <RPAREN>  
+        relationTypeName = parseRelationTypeName()  <LBRACE> vt = parseVarType() pred = parseValPredicate() <RBRACE>
+        {
+             relationTypeNameList.add(relationTypeName);
+             relationCond.add(vt); 
+             EntityRelCondList.add(pred);
+        }
+        ( relationTypeName = parseRelationTypeName()  <LBRACE> vt = parseVarType() pred = parseValPredicate() <RBRACE>
+        {
+             relationTypeNameList.add(relationTypeName);
+             relationCond.add(vt); 
+             EntityRelCondList.add(pred);
+        })*
+        {
+        
+        SecCondSyntax = NVQLSecCond.querydisplay(relationTypeNameList, relationCond, EntityRelCondList) ;
+        System.out.println("Encountered: create security-condition "+ secCondName.image + " (" +attrValList +")"+SecCondSyntax);
+        //startTime=System.nanoTime();
+        NVQLSecCond.createSecCond(secCondName.image, attrValList, relationTypeNameList, relationCond, EntityRelCondList, con);
+        endTime=System.nanoTime();
+        timeobj.displayTime(startTime,endTime);
+        
+        }
+}
+
+ArrayList<String> parseConditionList() :
+{
+        Token rtname = null, lparen = null, rparen = null;
+        String rtnameList = "", attrValList = "" ;
+        ArrayList<String> SecCondList = new ArrayList<String>();
+}
+{
+        rtname = <ID> (lparen = <LPAREN> attrValList = parseAttrValList() rparen = <RPAREN>)?
+        {
+               if(lparen!=null && rparen!=null)
+               rtnameList = rtnameList + rtname.image + lparen.image + attrValList + rparen.image;
+               else
+               rtnameList = rtnameList + rtname.image ;
+               SecCondList.add(rtnameList);
+               rtnameList="";
+               lparen=null; rparen=null; attrValList="";
+               
+        }
+        (<COMMA> rtname = <ID> (lparen = <LPAREN> attrValList = parseAttrValList() rparen = <RPAREN>)?
+        {
+                if(lparen!=null && rparen!=null)
+                rtnameList = rtnameList + rtname.image + lparen.image + attrValList + rparen.image; 
+                else
+                rtnameList = rtnameList + rtname.image ;
+                SecCondList.add(rtnameList);
+                rtnameList="";
+                lparen=null; rparen=null;attrValList="";
+        })*
+        {
+        return SecCondList;
+        }
+}
+
+void parseExpDefQuery() :
+{
+        String expTypeName, attrDefList="";
+        ArrayList<String> preCond,postCond;
+        Token cveVal;
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <EXDCMD>  expTypeName = parseExploitTypeName() <LPAREN> (attrDefList = parseAttrDefList())? <RPAREN>
+        <CVE> <LPAREN> cveVal = <QUOTED_STRING> <RPAREN> 
+        <PRECOND> <LBRACE> preCond = parseConditionList() <RBRACE>
+        <POSTCOND> <LBRACE> postCond = parseConditionList() <RBRACE>
+        {        
+        //SecCondDefSyntax = NVQLSecCond.querydisplay(SecCondDefSyntax, relationTypeNameList, EntityTypeNameList) ;
+        System.out.println("Encountered: define exploit-type "+ expTypeName + " (" +attrDefList +") CVE (" + cveVal.image + ")\n\t precond {"+NVQLExploitType.PreCondDisp(preCond)+"}\n\t postcond {"+NVQLExploitType.PostCondDisp(postCond)+"}");
+        //startTime=System.nanoTime();
+        NVQLExploitType.createExploitType(expTypeName, attrDefList, preCond, postCond, cveVal.image, con);
+        endTime=System.nanoTime();
+        timeobj.displayTime(startTime,endTime);
+        }
+}
+
+void parseExpQuery() :
+{
+        Token expTypeName;
+        String attrValList="",preCond ="",postCond="",vt;
+        ArrayList<String> pred;      
+        ArrayList<String> securityCond = new ArrayList<String>();
+        ArrayList<ArrayList<String>> EntityRelCondList = new ArrayList<ArrayList<String>>();
+        ArrayList<String> securityCond1 = new ArrayList<String>();
+        ArrayList<ArrayList<String>> EntityRelCondList1 = new ArrayList<ArrayList<String>>();
+
+}
+{
+        {
+                startTime=System.nanoTime();
+        }
+        <CEXPCMD>  expTypeName = <ID> <LPAREN> (attrValList = parseAttrValList())? <RPAREN>
+        <PRECOND> 
+        <LBRACE>  
+        vt = parseVarType() pred = parseValPredicate()
+        {
+             securityCond.add(vt); 
+             EntityRelCondList.add(pred);
+        }
+        ( <COMMA> vt = parseVarType() pred = parseValPredicate()
+        {
+             securityCond.add(vt); 
+             EntityRelCondList.add(pred);
+        })*
+        <RBRACE>
+        <POSTCOND> 
+        <LBRACE>  
+        vt = parseVarType() pred = parseValPredicate()
+        {
+             securityCond1.add(vt); 
+             EntityRelCondList1.add(pred);
+        }
+        ( <COMMA> vt = parseVarType() pred = parseValPredicate()
+        {
+             securityCond1.add(vt); 
+             EntityRelCondList1.add(pred);
+        })*
+        <RBRACE>
+        {
+                System.out.println("Encountered: create exploit "+ expTypeName.image + " (" +attrValList +") ");
+                preCond = NVQLExploit.preConddisplay(securityCond,EntityRelCondList);  
+                postCond = NVQLExploit.postConddisplay(securityCond1,EntityRelCondList1);  
+                System.out.println("\tprecond {"+preCond+"}"); 
+                System.out.println("\tpostcond {"+postCond+"}"); 
+                NVQLExploit.createExploit(expTypeName.image, attrValList, securityCond, EntityRelCondList, securityCond1, EntityRelCondList1, con);  
+                endTime=System.nanoTime();
+                timeobj.displayTime(startTime,endTime);
+        }
+}
