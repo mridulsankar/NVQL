@@ -1,12 +1,12 @@
-# AGQL
+# NVQL
 
-AGQL is a Domain Specific Language (DSL) to facilitate modeling of input data necessary for generation of attack graphs. It also has query constructs to help in attack graph based network security analysis. AGQL provides a higher level abstraction, whereby an user need not be concerned about underlying data management system, be it relational, graph data, etc. 
+NVQL is a Domain Specific Language (DSL) to facilitate modeling of input data necessary for generation of attack graphs. It also has query constructs to help in attack graph based network security analysis. NVQL provides a higher level abstraction, whereby an user need not be concerned about underlying data management system, be it relational, graph data, etc. 
 
-AGQL parser is generated using JavaCC (https://javacc.github.io/javacc/), an  open source parser and lexical analyzer generator.
+NVQL parser is generated using JavaCC (https://javacc.github.io/javacc/), an  open source parser and lexical analyzer generator.
 
-# AGQL-RDBMS 
+# NVQL-RDBMS 
 
-This version of AGQL uses PostgreSQL as the backend data store. 
+This version of NVQL uses PostgreSQL as the backend data store. 
 
 ## Install and Configure PostgreSQL
 
@@ -53,12 +53,12 @@ ALTER USER postgres PASSWORD 'yourPassword';
 Create two databases
 
 ```
-CREATE DATABASE "AGQL";
+CREATE DATABASE "NVQL";
 CREATE DATABASE "TVA";
 ```
 ## Install Graphviz
 
-AGQL uses open source graph visualization software Graphviz (https://www.graphviz.org) for generating attack graph images. 
+NVQL uses open source graph visualization software Graphviz (https://www.graphviz.org) for generating attack graph images. 
 
 ```
 sudo add-apt-repository universe
@@ -99,13 +99,13 @@ PGSQL_JDBC_JAR=/usr/share/java/postgresql-9.4.1212.jar
 
    
 
-## Step 2: Buid AGQL
+## Step 2: Buid NVQL
 
-Run buildAGQL.sh script. It generates the AGQL parser source files, compiles them  and places the class files in AGQL-Class-Files folder. 
+Run buildNVQL.sh script. It generates the NVQL parser source files, compiles them  and places the class files in NVQL-Class-Files folder. 
 
-## Step 3: Run AGQL interpreter
+## Step 3: Run NVQL interpreter
 
-Invoke AGQL.sh with name of the agql script as parameter. It populates the PgSQL database with appropriate tables and rows.
+Invoke NVQL.sh with name of the agql script as parameter. It populates the PgSQL database with appropriate tables and rows.
 
 ## Step4: Generate Attack Graph 
 
@@ -117,7 +117,7 @@ To clean everything run clean.sh script
 
 # References
 
-[1] 
+
 
 # Contributors
 
